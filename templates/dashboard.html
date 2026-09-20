@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Calculadora — Veronik Sweet{% endblock %}
+{% block content %}
+
+<div class="card rate-box" id="rateBox">
+  <span id="rateText">Cargando tasa BCV…</span>
+  <button type="button" onclick="actualizarTasa()">Actualizar</button>
+</div>
+
+{% if recetas %}
+<div class="card">
+  <h2><span class="badge">★</span> Tus recetas guardadas</h2>
+  <div class="recipe-list">
+    <a href="{{ url_for('main.calculadora') }}" class="{{ 'active' if not receta else '' }}">+ Nueva receta</a>
+    {% for r in recetas %}
+      <a href="{{ url_for('main.ver_receta', recipe_id=r.id) }}" class="{{ 'active' if receta and receta.id==r.id else '' }}">{{ r.nombre }}</a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<form method="POST" action="{{ url_for('main.guardar_receta') }}" id="recetaForm">
+  {% if receta %}<input type="hidden" name="recipe_id" value="{{ receta.id }}">{% endif %}
+
+  <div class="card">
+    <h2><span class="badge">1</span> Tu receta</h2>
+    <label for="nombre">Nombre de la receta</label>
+    <input type="text" id="nombre" name="nombre" required value="{{ receta.nombre if receta else '' }}" placeholder="Ej. Tres Leches de Oreo">
+    <label for="porciones">Porciones para vender</label>
+    <input type="number" id="porciones" name="porciones" min="1" step="1" value="{{ receta.porciones if receta else 8 }}" oninput="calcular()">
+  </div>
+
+  <div class="card">
+    <h2><span class="badge">2</span> Ingredientes que vas a usar</h2>
+    {% if not ingredientes %}
+      <p class="hint">Aún no tienes ingredientes cargados. Ve a <a href="{{ url_for('main.inventario') }}">Mis ingredientes</a> para agregarlos primero.</p>
+    {% endif %}
+    <div id="ingList"></div>
+    <button type="button" class="add-btn" onclick="addIngRow()">+ Agregar ingrediente</button>
+  </div>
+
+  <div class="card">
+    <h2><span class="badge">3</span> Empaques y trabajo</h2>
+    <label for="empaques_usd">Empaques de toda la receta ($)</label>
+    <input type="number" id="empaques_usd" name="empaques_usd" min="0" step="0.01" value="{{ receta.empaques_usd if receta else 0 }}" oninput="calcular()">
+    <label for="otros_gastos_usd">Otros gastos de esta receta ($)</label>
+    <input type="number" id="otros_gastos_usd" name="otros_gastos_usd" min="0" step="0.01" value="{{ receta.otros_gastos_usd if receta else 0 }}" oninput="calcular()">
+    <div class="row2">
+      <div>
+        <label for="minutos_trabajo">Tiempo de trabajo (min)</label>
+        <input type="number" id="minutos_trabajo" name="minutos_trabajo" min="0" value="{{ receta.minutos_trabajo if receta else 0 }}" oninput="calcular()">
+      </div>
+      <div>
+        <label for="valor_hora_usd">¿Cuánto vale tu hora? ($)</label>
+        <input type="number" id="valor_hora_usd" name="valor_hora_usd" min="0" step="0.01" value="{{ receta.valor_hora_usd if receta else 0 }}" oninput="calcular()">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="badge">4</span> Margen y comisión</h2>
+    <label for="margen_pct">Margen de ganancia (%)</label>
+    <input type="number" id="margen_pct" name="margen_pct" min="0" max="95" value="{{ receta.margen_pct if receta else 30 }}" oninput="calcular()">
+    <label for="comision_pct">Comisión por venta (%)</label>
+    <input type="number" id="comision_pct" name="comision_pct" min="0" max="90" value="{{ receta.comision_pct if receta else 0 }}" oninput="calcular()">
+  </div>
+
+  <div class="card" id="resultWrap" style="padding:0; border:none; background:none;"></div>
+
+  <button class="btn btn-primary" type="submit">Guardar receta</button>
+  {% if receta %}
+  <button class="btn btn-ghost" style="width:100%; margin-top:.6rem;" type="submit" formaction="{{ url_for('main.eliminar_receta', recipe_id=receta.id) }}">Eliminar esta receta</button>
+  {% endif %}
+</form>
+
+<script>
+const INGREDIENTES = {{ ingredientes_json | safe }};
+const RECETA_ITEMS = {{ receta_items_json | safe }};
+let nextId = 0;
+let tasaBCV = null;
+
+function ingOptions(selectedId){
+  let html = '<option value="">Selecciona…</option>';
+  INGREDIENTES.forEach(i=>{
+    const sel = (selectedId && String(selectedId)===String(i.id)) ? 'selected' : '';
+    html += `<option value="${i.id}" ${sel}>${i.nombre}</option>`;
+  });
+  return html;
+}
+
+function addIngRow(ingId, cantidad){
+  nextId++;
+  const div = document.createElement('div');
+  div.className = 'ing-row';
+  div.id = 'ing-' + nextId;
+  div.innerHTML = `
+    <select name="ing_id" class="ing-select" onchange="calcular()">${ingOptions(ingId)}</select>
+    <input type="number" name="ing_cantidad" class="ing-cantidad" value="${cantidad!=null?cantidad:0}" min="0" step="0.001" oninput="calcular()">
+    <button type="button" class="remove-btn" onclick="document.getElementById('ing-${nextId}').remove(); calcular();">✕</button>
+  `;
+  document.getElementById('ingList').appendChild(div);
+}
+
+if (RECETA_ITEMS.length){
+  RECETA_ITEMS.forEach(it => addIngRow(it.ingredient_id, it.cantidad));
+} else if (INGREDIENTES.length) {
+  addIngRow();
+}
+
+function money(n){ return '$' + n.toFixed(2); }
+
+function costoUnitario(ingId){
+  const ing = INGREDIENTES.find(i => String(i.id) === String(ingId));
+  return ing ? ing.costo_unitario : 0;
+}
+
+function calcular(){
+  const porciones = Math.max(1, parseFloat(document.getElementById('porciones').value) || 1);
+  const rows = document.querySelectorAll('.ing-row');
+  let costoIngredientes = 0;
+  rows.forEach(r=>{
+    const id = r.querySelector('.ing-select').value;
+    const cant = parseFloat(r.querySelector('.ing-cantidad').value) || 0;
+    costoIngredientes += costoUnitario(id) * cant;
+  });
+
+  const empaques = parseFloat(document.getElementById('empaques_usd').value) || 0;
+  const otros = parseFloat(document.getElementById('otros_gastos_usd').value) || 0;
+  const minutos = parseFloat(document.getElementById('minutos_trabajo').value) || 0;
+  const valorHora = parseFloat(document.getElementById('valor_hora_usd').value) || 0;
+  const trabajo = (minutos/60) * valorHora;
+
+  const margen = Math.min(95, Math.max(0, parseFloat(document.getElementById('margen_pct').value) || 0)) / 100;
+  const comision = Math.min(90, Math.max(0, parseFloat(document.getElementById('comision_pct').value) || 0)) / 100;
+
+  const costoTotalReceta = costoIngredientes + empaques + otros + trabajo;
+  const costoPorPorcion = costoTotalReceta / porciones;
+  const denom = 1 - margen - comision;
+
+  const wrap = document.getElementById('resultWrap');
+  if (denom <= 0){
+    wrap.innerHTML = `<div class="result"><div class="label">Ajusta el margen o la comisión</div>
+      <div style="font-size:.9rem; margin-top:.5rem;">La suma de margen + comisión no puede ser 100% o más.</div></div>`;
+    return;
+  }
+  const precioSugerido = costoPorPorcion / denom;
+  const comisionMonto = precioSugerido * comision;
+  const gananciaPorPorcion = precioSugerido - costoPorPorcion - comisionMonto;
+
+  let bsHtml = '';
+  if (tasaBCV){
+    bsHtml = `<div class="price-bs">≈ Bs. ${(precioSugerido*tasaBCV).toFixed(2)} (tasa BCV)</div>`;
+  }
+
+  wrap.innerHTML = `
+    <div class="result">
+      <div class="label">Tu precio sugerido</div>
+      <div class="price">${money(precioSugerido)}</div>
+      ${bsHtml}
+      <div class="breakdown">
+        <div>Costo/porción<b>${money(costoPorPorcion)}</b></div>
+        <div>Ganancia/porción<b>${money(gananciaPorPorcion)}</b></div>
+      </div>
+    </div>
+  `;
+}
+
+async function cargarTasa(){
+  try{
+    const res = await fetch('/api/tasa');
+    const data = await res.json();
+    if (data.tasa){
+      tasaBCV = data.tasa;
+      document.getElementById('rateText').textContent = `1 USD = Bs. ${data.tasa.toFixed(2)} (BCV, ${data.fecha})`;
+    } else {
+      document.getElementById('rateText').textContent = 'No se pudo obtener la tasa BCV.';
+    }
+    calcular();
+  } catch(e){
+    document.getElementById('rateText').textContent = 'No se pudo obtener la tasa BCV.';
+  }
+}
+
+async function actualizarTasa(){
+  document.getElementById('rateText').textContent = 'Actualizando…';
+  try{
+    await fetch('/api/tasa/actualizar', {method:'POST'});
+  } catch(e){}
+  cargarTasa();
+}
+
+cargarTasa();
+calcular();
+</script>
+{% endblock %}

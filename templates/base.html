@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block title %}Veronik Sweet{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧁</text></svg>">
+</head>
+<body>
+{% if current_user.is_authenticated %}
+<header>
+  <div class="top">
+    <div>
+      <h1>🧁 Veronik Sweet</h1>
+      <p>Costos, inventario y precios al día</p>
+    </div>
+    <a class="logout" href="{{ url_for('auth.logout') }}">Salir</a>
+  </div>
+  <nav class="tabs">
+    <a href="{{ url_for('main.calculadora') }}" class="{{ 'active' if request.endpoint in ['main.calculadora','main.ver_receta'] else '' }}">Calculadora</a>
+    <a href="{{ url_for('main.inventario') }}" class="{{ 'active' if request.endpoint and 'inventario' in request.endpoint else '' }}">Mis ingredientes</a>
+  </nav>
+</header>
+{% endif %}
+<main>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash {{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

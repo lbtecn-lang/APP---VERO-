@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: veronik-sweet-app
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: APP_USERNAME
+        value: veronik
+      - key: APP_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: veronik-sweet-db
+          property: connectionString
+
+databases:
+  - name: veronik-sweet-db
+    plan: free

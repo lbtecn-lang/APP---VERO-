@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Mis ingredientes — Veronik Sweet{% endblock %}
+{% block content %}
+
+<div class="card">
+  <h2><span class="badge">+</span> Agregar ingrediente</h2>
+  <form method="POST" action="{{ url_for('main.inventario_nuevo') }}">
+    <label for="nombre">Nombre</label>
+    <input type="text" name="nombre" id="nombre" required placeholder="Ej. Harina de trigo">
+    <div class="row2">
+      <div>
+        <label for="presentacion_cantidad">Presentación: cantidad</label>
+        <input type="number" name="presentacion_cantidad" step="0.001" min="0.001" value="1" required>
+      </div>
+      <div>
+        <label for="presentacion_unidad">Unidad</label>
+        <input type="text" name="presentacion_unidad" placeholder="kg, L, unidad…" value="unidad" required>
+      </div>
+    </div>
+    <label for="precio_compra_usd">Precio de compra ($)</label>
+    <input type="number" name="precio_compra_usd" step="0.01" min="0" value="0" required>
+    <div class="row2">
+      <div>
+        <label for="stock_actual">Stock actual</label>
+        <input type="number" name="stock_actual" step="0.001" min="0" value="0">
+      </div>
+      <div>
+        <label for="stock_minimo">Stock mínimo (alerta)</label>
+        <input type="number" name="stock_minimo" step="0.001" min="0" value="0">
+      </div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:1rem;" type="submit">Agregar</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2><span class="badge">📦</span> Inventario</h2>
+  {% if not ingredientes %}
+    <p class="hint">Aún no has agregado ingredientes.</p>
+  {% else %}
+  <table>
+    <tr>
+      <th>Ingrediente</th>
+      <th>Presentación</th>
+      <th>Costo/unidad</th>
+      <th>Stock</th>
+      <th></th>
+    </tr>
+    {% for ing in ingredientes %}
+    <tr>
+      <td>{{ ing.nombre }}</td>
+      <td>{{ ing.presentacion_cantidad }} {{ ing.presentacion_unidad }} — ${{ '%.2f'|format(ing.precio_compra_usd) }}</td>
+      <td>${{ '%.4f'|format(ing.costo_unitario_usd) }}</td>
+      <td>
+        {{ ing.stock_actual }}
+        {% if ing.stock_bajo %}<span class="pill low">bajo</span>{% else %}<span class="pill ok">ok</span>{% endif %}
+      </td>
+      <td>
+        <form method="POST" action="{{ url_for('main.inventario_eliminar', ing_id=ing.id) }}" onsubmit="return confirm('¿Eliminar {{ ing.nombre }}?');">
+          <button class="btn-danger" type="submit">Eliminar</button>
+        </form>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="5" style="padding-top:0;">
+        <details>
+          <summary style="cursor:pointer; font-size:.78rem; color:var(--muted);">Editar</summary>
+          <form method="POST" action="{{ url_for('main.inventario_editar', ing_id=ing.id) }}" style="margin-top:.5rem;">
+            <div class="row3">
+              <input type="text" name="nombre" value="{{ ing.nombre }}" required>
+              <input type="number" name="presentacion_cantidad" step="0.001" value="{{ ing.presentacion_cantidad }}" required>
+              <input type="text" name="presentacion_unidad" value="{{ ing.presentacion_unidad }}" required>
+            </div>
+            <div class="row3" style="margin-top:.5rem;">
+              <input type="number" name="precio_compra_usd" step="0.01" value="{{ ing.precio_compra_usd }}" required>
+              <input type="number" name="stock_actual" step="0.001" value="{{ ing.stock_actual }}">
+              <input type="number" name="stock_minimo" step="0.001" value="{{ ing.stock_minimo }}">
+            </div>
+            <button class="btn btn-ghost" style="margin-top:.5rem;" type="submit">Guardar cambios</button>
+          </form>
+        </details>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+</div>
+{% endblock %}
