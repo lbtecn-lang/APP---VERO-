@@ -3,8 +3,33 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db
 
+# Unidades controladas: (categoría, factor de conversión a la unidad base de esa categoría)
+# Base de "peso" = gramo. Base de "volumen" = mililitro. "conteo" no se convierte.
+UNIT_DEFS = {
+    "g": ("peso", 1),
+    "kg": ("peso", 1000),
+    "ml": ("volumen", 1),
+    "L": ("volumen", 1000),
+    "unidad": ("conteo", 1),
+}
+UNIDADES_POR_CATEGORIA = {
+    "peso": ["g", "kg"],
+    "volumen": ["ml", "L"],
+    "conteo": ["unidad"],
+}
+
+
+def categoria_de(unidad):
+    return UNIT_DEFS.get(unidad, ("conteo", 1))[0]
+
+
+def a_unidad_base(cantidad, unidad):
+    _, factor = UNIT_DEFS.get(unidad, ("conteo", 1))
+    return (cantidad or 0) * factor
+
 
 class User(UserMixin, db.Model):
+    __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
@@ -17,19 +42,29 @@ class User(UserMixin, db.Model):
 
 
 class Ingredient(db.Model):
+    __tablename__ = "ingredient"
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     nombre = db.Column(db.String(120), nullable=False)
     presentacion_cantidad = db.Column(db.Float, nullable=False, default=1)
+    # Columna antigua (texto libre) — se conserva por compatibilidad pero ya no se usa
+    # para calcular. La unidad real y controlada es unidad_compra.
     presentacion_unidad = db.Column(db.String(40), nullable=False, default="unidad")
+    unidad_compra = db.Column(db.String(10), nullable=False, default="unidad")
     precio_compra_usd = db.Column(db.Float, nullable=False, default=0)
     stock_actual = db.Column(db.Float, nullable=False, default=0)
     stock_minimo = db.Column(db.Float, nullable=False, default=0)
 
     @property
-    def costo_unitario_usd(self):
-        if self.presentacion_cantidad and self.presentacion_cantidad > 0:
-            return self.precio_compra_usd / self.presentacion_cantidad
+    def categoria(self):
+        return categoria_de(self.unidad_compra)
+
+    @property
+    def costo_unitario_base(self):
+        """Costo por gramo, por mililitro o por unidad, según la categoría."""
+        cantidad_base = a_unidad_base(self.presentacion_cantidad, self.unidad_compra)
+        if cantidad_base > 0:
+            return self.precio_compra_usd / cantidad_base
         return 0
 
     @property
@@ -38,6 +73,7 @@ class Ingredient(db.Model):
 
 
 class Recipe(db.Model):
+    __tablename__ = "recipe"
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     nombre = db.Column(db.String(120), nullable=False)
@@ -82,10 +118,12 @@ class Recipe(db.Model):
 
 
 class RecipeIngredient(db.Model):
+    __tablename__ = "recipe_ingredient"
     id = db.Column(db.Integer, primary_key=True)
     recipe_id = db.Column(db.Integer, db.ForeignKey("recipe.id"), nullable=False)
     ingredient_id = db.Column(db.Integer, db.ForeignKey("ingredient.id"), nullable=False)
     cantidad_usada = db.Column(db.Float, nullable=False, default=0)
+    unidad_usada = db.Column(db.String(10), nullable=False, default="unidad")
 
     ingredient = db.relationship("Ingredient")
 
@@ -93,10 +131,12 @@ class RecipeIngredient(db.Model):
     def costo_extendido_usd(self):
         if not self.ingredient:
             return 0
-        return self.ingredient.costo_unitario_usd * self.cantidad_usada
+        cantidad_base = a_unidad_base(self.cantidad_usada, self.unidad_usada)
+        return self.ingredient.costo_unitario_base * cantidad_base
 
 
 class ExchangeRate(db.Model):
+    __tablename__ = "exchange_rate"
     id = db.Column(db.Integer, primary_key=True)
     tasa_usd_ves = db.Column(db.Float, nullable=False)
     fecha = db.Column(db.String(20), nullable=False)

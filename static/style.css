@@ -40,7 +40,8 @@ th{color:var(--muted); font-weight:600; font-size:.78rem; text-transform:upperca
 .btn-ghost{background:none; border:1px solid var(--border); color:var(--ink);}
 .btn-danger{background:none; color:var(--bad); border:none; cursor:pointer; font-size:.85rem;}
 .add-btn{width:100%; padding:.65rem; border:1.5px dashed var(--pink); background:none; color:var(--pink); border-radius:10px; font-size:.88rem; font-weight:600; cursor:pointer; margin-top:.2rem;}
-.ing-row{border:1px solid var(--border); border-radius:10px; padding:.6rem; margin-bottom:.5rem; background:var(--pink-pale); display:grid; grid-template-columns:2fr 1fr auto; gap:.5rem; align-items:center;}
+.ing-row{border:1px solid var(--border); border-radius:10px; padding:.6rem; margin-bottom:.5rem; background:var(--pink-pale); display:grid; grid-template-columns:1.6fr .8fr .7fr auto; gap:.4rem; align-items:center;}
+.ing-row .ext-cost{grid-column:1 / -1; margin-top:.3rem;}
 .remove-btn{background:none; border:none; color:var(--muted); font-size:1.1rem; cursor:pointer;}
 .result{background:var(--pink); color:#fff; border-radius:16px; padding:1.3rem; text-align:center;}
 .result .label{font-size:.78rem; opacity:.85; text-transform:uppercase; letter-spacing:.04em;}

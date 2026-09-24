@@ -1,9 +1,30 @@
 import os
 from flask import Flask
+from sqlalchemy import inspect, text
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from extensions import db, login_manager
 from models import User
+
+
+def migrate_schema():
+    """Agrega columnas nuevas a tablas ya existentes, sin tocar ni borrar datos.
+    Necesario porque el proyecto no usa Alembic/Flask-Migrate; para cambios de
+    esquema más grandes en el futuro conviene migrar a eso."""
+    inspector = inspect(db.engine)
+    existing_tables = inspector.get_table_names()
+
+    changes = [
+        ("ingredient", "unidad_compra", "VARCHAR(10) DEFAULT 'unidad'"),
+        ("recipe_ingredient", "unidad_usada", "VARCHAR(10) DEFAULT 'unidad'"),
+    ]
+    for table, column, coltype in changes:
+        if table not in existing_tables:
+            continue
+        cols = [c["name"] for c in inspector.get_columns(table)]
+        if column not in cols:
+            db.session.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}"))
+    db.session.commit()
 
 
 def create_app():
@@ -31,6 +52,7 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        migrate_schema()
         ensure_default_user()
 
     # Job diario: refresca la tasa BCV una vez al día (además del refresco

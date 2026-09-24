@@ -34,6 +34,8 @@
     <h2><span class="badge">2</span> Ingredientes que vas a usar</h2>
     {% if not ingredientes %}
       <p class="hint">Aún no tienes ingredientes cargados. Ve a <a href="{{ url_for('main.inventario') }}">Mis ingredientes</a> para agregarlos primero.</p>
+    {% else %}
+      <p class="hint">Elige la unidad de cada fila (g/kg o ml/L según el ingrediente) — se convierte sola, no tienes que hacer la cuenta.</p>
     {% endif %}
     <div id="ingList"></div>
     <button type="button" class="add-btn" onclick="addIngRow()">+ Agregar ingrediente</button>
@@ -76,8 +78,15 @@
 <script>
 const INGREDIENTES = {{ ingredientes_json | safe }};
 const RECETA_ITEMS = {{ receta_items_json | safe }};
+const UNIDADES_POR_CATEGORIA = {{ unidades_json | safe }};
+const UNIT_FACTORS = {g:1, kg:1000, ml:1, L:1000, unidad:1};
+const UNIT_LABELS = {g:'g', kg:'kg', ml:'ml', L:'L', unidad:'unid.'};
 let nextId = 0;
 let tasaBCV = null;
+
+function findIng(ingId){
+  return INGREDIENTES.find(i => String(i.id) === String(ingId));
+}
 
 function ingOptions(selectedId){
   let html = '<option value="">Selecciona…</option>';
@@ -88,30 +97,51 @@ function ingOptions(selectedId){
   return html;
 }
 
-function addIngRow(ingId, cantidad){
+function unidadOptions(categoria, selectedUnidad){
+  const opciones = UNIDADES_POR_CATEGORIA[categoria] || ['unidad'];
+  return opciones.map(u => `<option value="${u}" ${u===selectedUnidad?'selected':''}>${UNIT_LABELS[u]}</option>`).join('');
+}
+
+function onIngredientChange(rowId){
+  const row = document.getElementById(rowId);
+  const ingId = row.querySelector('.ing-select').value;
+  const ing = findIng(ingId);
+  const unidadSelect = row.querySelector('.ing-unidad');
+  const categoria = ing ? ing.categoria : 'conteo';
+  unidadSelect.innerHTML = unidadOptions(categoria, ing ? ing.unidad_compra : 'unidad');
+  calcular();
+}
+
+function addIngRow(ingId, cantidad, unidad){
   nextId++;
+  const rowId = 'ing-' + nextId;
+  const ing = ingId ? findIng(ingId) : null;
+  const categoria = ing ? ing.categoria : 'conteo';
   const div = document.createElement('div');
   div.className = 'ing-row';
-  div.id = 'ing-' + nextId;
+  div.id = rowId;
   div.innerHTML = `
-    <select name="ing_id" class="ing-select" onchange="calcular()">${ingOptions(ingId)}</select>
+    <select name="ing_id" class="ing-select" onchange="onIngredientChange('${rowId}')">${ingOptions(ingId)}</select>
     <input type="number" name="ing_cantidad" class="ing-cantidad" value="${cantidad!=null?cantidad:0}" min="0" step="0.001" oninput="calcular()">
-    <button type="button" class="remove-btn" onclick="document.getElementById('ing-${nextId}').remove(); calcular();">✕</button>
+    <select name="ing_unidad" class="ing-unidad" onchange="calcular()">${unidadOptions(categoria, unidad)}</select>
+    <button type="button" class="remove-btn" onclick="document.getElementById('${rowId}').remove(); calcular();">✕</button>
   `;
   document.getElementById('ingList').appendChild(div);
 }
 
 if (RECETA_ITEMS.length){
-  RECETA_ITEMS.forEach(it => addIngRow(it.ingredient_id, it.cantidad));
+  RECETA_ITEMS.forEach(it => addIngRow(it.ingredient_id, it.cantidad, it.unidad));
 } else if (INGREDIENTES.length) {
   addIngRow();
 }
 
 function money(n){ return '$' + n.toFixed(2); }
 
-function costoUnitario(ingId){
-  const ing = INGREDIENTES.find(i => String(i.id) === String(ingId));
-  return ing ? ing.costo_unitario : 0;
+function costoExtendido(ingId, cantidad, unidad){
+  const ing = findIng(ingId);
+  if (!ing) return 0;
+  const factor = UNIT_FACTORS[unidad] || 1;
+  return ing.costo_unitario_base * cantidad * factor;
 }
 
 function calcular(){
@@ -121,7 +151,8 @@ function calcular(){
   rows.forEach(r=>{
     const id = r.querySelector('.ing-select').value;
     const cant = parseFloat(r.querySelector('.ing-cantidad').value) || 0;
-    costoIngredientes += costoUnitario(id) * cant;
+    const unidad = r.querySelector('.ing-unidad').value;
+    costoIngredientes += costoExtendido(id, cant, unidad);
   });
 
   const empaques = parseFloat(document.getElementById('empaques_usd').value) || 0;

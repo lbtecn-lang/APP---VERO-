@@ -2,7 +2,7 @@ import json
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from extensions import db
-from models import Ingredient, Recipe, RecipeIngredient
+from models import Ingredient, Recipe, RecipeIngredient, UNIDADES_POR_CATEGORIA
 from currency import get_current_rate, refresh_rate
 
 main_bp = Blueprint("main", __name__)
@@ -10,7 +10,13 @@ main_bp = Blueprint("main", __name__)
 
 def _ingredientes_json(ingredientes):
     return json.dumps([
-        {"id": i.id, "nombre": i.nombre, "costo_unitario": round(i.costo_unitario_usd, 6)}
+        {
+            "id": i.id,
+            "nombre": i.nombre,
+            "categoria": i.categoria,
+            "unidad_compra": i.unidad_compra,
+            "costo_unitario_base": round(i.costo_unitario_base, 8),
+        }
         for i in ingredientes
     ])
 
@@ -19,7 +25,7 @@ def _receta_items_json(receta):
     if not receta:
         return "[]"
     return json.dumps([
-        {"ingredient_id": it.ingredient_id, "cantidad": it.cantidad_usada}
+        {"ingredient_id": it.ingredient_id, "cantidad": it.cantidad_usada, "unidad": it.unidad_usada}
         for it in receta.items
     ])
 
@@ -55,11 +61,13 @@ def inventario():
 @main_bp.route("/inventario/nuevo", methods=["POST"])
 @login_required
 def inventario_nuevo():
+    unidad = request.form.get("unidad_compra", "unidad").strip()
     ing = Ingredient(
         user_id=current_user.id,
         nombre=request.form.get("nombre", "").strip(),
         presentacion_cantidad=float(request.form.get("presentacion_cantidad") or 1),
-        presentacion_unidad=request.form.get("presentacion_unidad", "unidad").strip(),
+        unidad_compra=unidad,
+        presentacion_unidad=unidad,
         precio_compra_usd=float(request.form.get("precio_compra_usd") or 0),
         stock_actual=float(request.form.get("stock_actual") or 0),
         stock_minimo=float(request.form.get("stock_minimo") or 0),
@@ -76,7 +84,9 @@ def inventario_editar(ing_id):
     ing = Ingredient.query.filter_by(id=ing_id, user_id=current_user.id).first_or_404()
     ing.nombre = request.form.get("nombre", ing.nombre).strip()
     ing.presentacion_cantidad = float(request.form.get("presentacion_cantidad") or 1)
-    ing.presentacion_unidad = request.form.get("presentacion_unidad", ing.presentacion_unidad).strip()
+    unidad = request.form.get("unidad_compra", ing.unidad_compra).strip()
+    ing.unidad_compra = unidad
+    ing.presentacion_unidad = unidad
     ing.precio_compra_usd = float(request.form.get("precio_compra_usd") or 0)
     ing.stock_actual = float(request.form.get("stock_actual") or 0)
     ing.stock_minimo = float(request.form.get("stock_minimo") or 0)
@@ -103,7 +113,8 @@ def calculadora():
     recetas = Recipe.query.filter_by(user_id=current_user.id).order_by(Recipe.creado.desc()).all()
     return render_template("dashboard.html", ingredientes=ingredientes, recetas=recetas, receta=None,
                             ingredientes_json=_ingredientes_json(ingredientes),
-                            receta_items_json="[]")
+                            receta_items_json="[]",
+                            unidades_json=json.dumps(UNIDADES_POR_CATEGORIA))
 
 
 @main_bp.route("/receta/<int:recipe_id>")
@@ -114,7 +125,8 @@ def ver_receta(recipe_id):
     receta = Recipe.query.filter_by(id=recipe_id, user_id=current_user.id).first_or_404()
     return render_template("dashboard.html", ingredientes=ingredientes, recetas=recetas, receta=receta,
                             ingredientes_json=_ingredientes_json(ingredientes),
-                            receta_items_json=_receta_items_json(receta))
+                            receta_items_json=_receta_items_json(receta),
+                            unidades_json=json.dumps(UNIDADES_POR_CATEGORIA))
 
 
 @main_bp.route("/receta/guardar", methods=["POST"])
@@ -139,12 +151,15 @@ def guardar_receta():
 
     ing_ids = request.form.getlist("ing_id")
     ing_cants = request.form.getlist("ing_cantidad")
-    for ing_id, cantidad in zip(ing_ids, ing_cants):
+    ing_unidades = request.form.getlist("ing_unidad")
+    for ing_id, cantidad, unidad in zip(ing_ids, ing_cants, ing_unidades):
         if not ing_id or not cantidad:
             continue
         ingrediente = Ingredient.query.filter_by(id=int(ing_id), user_id=current_user.id).first()
         if ingrediente:
-            receta.items.append(RecipeIngredient(ingredient=ingrediente, cantidad_usada=float(cantidad)))
+            receta.items.append(RecipeIngredient(
+                ingredient=ingrediente, cantidad_usada=float(cantidad), unidad_usada=unidad or "unidad"
+            ))
 
     db.session.commit()
     flash(f"Receta '{receta.nombre}' guardada.", "ok")

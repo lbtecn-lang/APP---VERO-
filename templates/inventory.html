@@ -13,11 +13,24 @@
         <input type="number" name="presentacion_cantidad" step="0.001" min="0.001" value="1" required>
       </div>
       <div>
-        <label for="presentacion_unidad">Unidad</label>
-        <input type="text" name="presentacion_unidad" placeholder="kg, L, unidad…" value="unidad" required>
+        <label for="unidad_compra">Unidad</label>
+        <select name="unidad_compra" required>
+          <optgroup label="Peso">
+            <option value="g">gramos (g)</option>
+            <option value="kg">kilogramos (kg)</option>
+          </optgroup>
+          <optgroup label="Volumen">
+            <option value="ml">mililitros (ml)</option>
+            <option value="L">litros (L)</option>
+          </optgroup>
+          <optgroup label="Conteo">
+            <option value="unidad" selected>unidad (piezas, huevos, envases…)</option>
+          </optgroup>
+        </select>
       </div>
     </div>
-    <label for="precio_compra_usd">Precio de compra ($)</label>
+    <div class="hint">Ej. "1 kg" si compras la harina por kilo, o "12 unidad" si compras una docena de huevos.</div>
+    <label for="precio_compra_usd">Precio de compra de esa presentación ($)</label>
     <input type="number" name="precio_compra_usd" step="0.01" min="0" value="0" required>
     <div class="row2">
       <div>
@@ -42,17 +55,22 @@
     <tr>
       <th>Ingrediente</th>
       <th>Presentación</th>
-      <th>Costo/unidad</th>
+      <th>Costo unitario</th>
       <th>Stock</th>
       <th></th>
     </tr>
     {% for ing in ingredientes %}
     <tr>
       <td>{{ ing.nombre }}</td>
-      <td>{{ ing.presentacion_cantidad }} {{ ing.presentacion_unidad }} — ${{ '%.2f'|format(ing.precio_compra_usd) }}</td>
-      <td>${{ '%.4f'|format(ing.costo_unitario_usd) }}</td>
+      <td>{{ ing.presentacion_cantidad }} {{ ing.unidad_compra }} — ${{ '%.2f'|format(ing.precio_compra_usd) }}</td>
       <td>
-        {{ ing.stock_actual }}
+        {% if ing.categoria == 'peso' %}${{ '%.5f'|format(ing.costo_unitario_base) }}/g
+        {% elif ing.categoria == 'volumen' %}${{ '%.5f'|format(ing.costo_unitario_base) }}/ml
+        {% else %}${{ '%.4f'|format(ing.costo_unitario_base) }}/unidad
+        {% endif %}
+      </td>
+      <td>
+        {{ ing.stock_actual }} {{ ing.unidad_compra }}
         {% if ing.stock_bajo %}<span class="pill low">bajo</span>{% else %}<span class="pill ok">ok</span>{% endif %}
       </td>
       <td>
@@ -69,7 +87,19 @@
             <div class="row3">
               <input type="text" name="nombre" value="{{ ing.nombre }}" required>
               <input type="number" name="presentacion_cantidad" step="0.001" value="{{ ing.presentacion_cantidad }}" required>
-              <input type="text" name="presentacion_unidad" value="{{ ing.presentacion_unidad }}" required>
+              <select name="unidad_compra" required>
+                <optgroup label="Peso">
+                  <option value="g" {{ 'selected' if ing.unidad_compra=='g' }}>gramos (g)</option>
+                  <option value="kg" {{ 'selected' if ing.unidad_compra=='kg' }}>kilogramos (kg)</option>
+                </optgroup>
+                <optgroup label="Volumen">
+                  <option value="ml" {{ 'selected' if ing.unidad_compra=='ml' }}>mililitros (ml)</option>
+                  <option value="L" {{ 'selected' if ing.unidad_compra=='L' }}>litros (L)</option>
+                </optgroup>
+                <optgroup label="Conteo">
+                  <option value="unidad" {{ 'selected' if ing.unidad_compra=='unidad' }}>unidad</option>
+                </optgroup>
+              </select>
             </div>
             <div class="row3" style="margin-top:.5rem;">
               <input type="number" name="precio_compra_usd" step="0.01" value="{{ ing.precio_compra_usd }}" required>
