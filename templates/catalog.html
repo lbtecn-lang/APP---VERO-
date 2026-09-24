@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Veronik Sweet — Catálogo{% endblock %}
+{% block content %}
+<div style="text-align:center; padding:1.5rem 0 .5rem;">
+  <h1 style="color:var(--pink); margin:0;">🧁 Veronik Sweet</h1>
+  <p class="hint">Pide tus tortas y porciones directo por WhatsApp</p>
+</div>
+
+{% if not productos %}
+  <div class="card"><p class="hint">Todavía no hay productos publicados. Vuelve pronto 🧁</p></div>
+{% else %}
+  {% for p in productos %}
+  <div class="card" style="padding:0; overflow:hidden;">
+    {% if p.imagen_url %}
+    <img src="{{ p.imagen_url }}" alt="{{ p.nombre }}" style="width:100%; max-height:260px; object-fit:cover; display:block;">
+    {% endif %}
+    <div style="padding:1rem 1.1rem;">
+      <div style="display:flex; justify-content:space-between; align-items:baseline;">
+        <strong style="font-size:1.05rem;">{{ p.nombre }}</strong>
+        <strong style="color:var(--pink);">${{ '%.2f'|format(p.precio_usd) }}</strong>
+      </div>
+      {% if p.descripcion %}<p class="hint" style="margin-top:.3rem;">{{ p.descripcion }}</p>{% endif %}
+      <a class="btn btn-primary" style="display:block; text-align:center; margin-top:.8rem; text-decoration:none;"
+         href="https://wa.me/{{ whatsapp }}?text={{ ('Hola! Quiero pedir: ' + p.nombre) | urlencode }}"
+         target="_blank" rel="noopener">Pedir por WhatsApp</a>
+    </div>
+  </div>
+  {% endfor %}
+{% endif %}
+{% endblock %}

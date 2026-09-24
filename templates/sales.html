@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Ventas — Veronik Sweet{% endblock %}
+{% block content %}
+
+<div class="card">
+  <h2><span class="badge">+</span> Registrar venta</h2>
+  <form method="POST" action="{{ url_for('main.ventas_nueva') }}">
+    <label for="recipe_id">Producto (de tus recetas guardadas, opcional)</label>
+    <select name="recipe_id" id="recipe_id" onchange="autocompletarPrecio(this)">
+      <option value="">— Elegir de mis recetas (opcional) —</option>
+      {% for r in recetas %}
+        <option value="{{ r.id }}" data-precio="{{ '%.2f'|format(r.precio_sugerido_usd() or 0) }}" data-nombre="{{ r.nombre }}">{{ r.nombre }}</option>
+      {% endfor %}
+    </select>
+    <label for="producto_nombre">O escribe el nombre del producto</label>
+    <input type="text" name="producto_nombre" id="producto_nombre" placeholder="Ej. Tres Leches de Oreo">
+    <div class="row2">
+      <div>
+        <label for="cantidad">Cantidad vendida</label>
+        <input type="number" name="cantidad" id="cantidad" step="0.01" min="0.01" value="1" required>
+      </div>
+      <div>
+        <label for="precio_unitario_usd">Precio unitario ($)</label>
+        <input type="number" name="precio_unitario_usd" id="precio_unitario_usd" step="0.01" min="0" value="0" required>
+      </div>
+    </div>
+    <label for="cliente">Cliente (opcional)</label>
+    <input type="text" name="cliente" id="cliente" placeholder="Nombre o @usuario de Instagram">
+    <label for="notas">Notas (opcional)</label>
+    <input type="text" name="notas" id="notas" placeholder="Ej. entregado por delivery">
+    <button class="btn btn-primary" style="margin-top:1rem;" type="submit">Registrar venta</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2><span class="badge">$</span> Historial de ventas</h2>
+  {% if not ventas %}
+    <p class="hint">Aún no has registrado ventas.</p>
+  {% else %}
+  <p class="hint" style="font-size:.95rem; color:var(--ink); font-weight:700;">Total acumulado: ${{ '%.2f'|format(total) }}</p>
+  <table>
+    <tr>
+      <th>Fecha</th><th>Producto</th><th>Cant.</th><th>Total</th><th></th>
+    </tr>
+    {% for v in ventas %}
+    <tr>
+      <td>{{ v.fecha.strftime('%d/%m/%Y') }}</td>
+      <td>{{ v.producto_nombre }}{% if v.cliente %} <span class="hint">({{ v.cliente }})</span>{% endif %}</td>
+      <td>{{ v.cantidad }}</td>
+      <td>${{ '%.2f'|format(v.total_usd) }}</td>
+      <td>
+        <form method="POST" action="{{ url_for('main.ventas_eliminar', sale_id=v.id) }}" onsubmit="return confirm('¿Eliminar esta venta?');">
+          <button class="btn-danger" type="submit">Eliminar</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+</div>
+
+<script>
+function autocompletarPrecio(select){
+  const opt = select.options[select.selectedIndex];
+  if (!opt.value) return;
+  document.getElementById('producto_nombre').value = opt.dataset.nombre || '';
+  document.getElementById('precio_unitario_usd').value = opt.dataset.precio || 0;
+}
+</script>
+{% endblock %}

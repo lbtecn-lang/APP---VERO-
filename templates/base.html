@@ -19,7 +19,10 @@
   </div>
   <nav class="tabs">
     <a href="{{ url_for('main.calculadora') }}" class="{{ 'active' if request.endpoint in ['main.calculadora','main.ver_receta'] else '' }}">Calculadora</a>
-    <a href="{{ url_for('main.inventario') }}" class="{{ 'active' if request.endpoint and 'inventario' in request.endpoint else '' }}">Mis ingredientes</a>
+    <a href="{{ url_for('main.inventario') }}" class="{{ 'active' if request.endpoint and 'inventario' in request.endpoint else '' }}">Ingredientes</a>
+    <a href="{{ url_for('main.ventas') }}" class="{{ 'active' if request.endpoint and 'ventas' in request.endpoint else '' }}">Ventas</a>
+    <a href="{{ url_for('main.productos') }}" class="{{ 'active' if request.endpoint and 'productos' in request.endpoint else '' }}">Catálogo</a>
+    <a href="{{ url_for('main.reportes') }}" class="{{ 'active' if request.endpoint == 'main.reportes' else '' }}">Reportes</a>
   </nav>
 </header>
 {% endif %}

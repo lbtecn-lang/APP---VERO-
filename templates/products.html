@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Catálogo — Veronik Sweet{% endblock %}
+{% block content %}
+
+<div class="card">
+  <h2><span class="badge">🔗</span> Tu catálogo público</h2>
+  <p class="hint">Comparte este link con tus clientes — no necesitan cuenta ni contraseña:</p>
+  <input type="text" readonly value="{{ request.url_root }}catalogo" onclick="this.select();" style="font-size:.85rem;">
+</div>
+
+<div class="card">
+  <h2><span class="badge">+</span> Agregar producto</h2>
+  <form method="POST" action="{{ url_for('main.productos_nuevo') }}">
+    <label for="nombre">Nombre del producto</label>
+    <input type="text" name="nombre" required placeholder="Ej. Tres Leches de Oreo">
+    <label for="descripcion">Descripción corta</label>
+    <input type="text" name="descripcion" placeholder="Ej. Rellena con crema de Oreo, porción individual">
+    <div class="row2">
+      <div>
+        <label for="precio_usd">Precio ($)</label>
+        <input type="number" name="precio_usd" step="0.01" min="0" value="0" required>
+      </div>
+      <div>
+        <label for="recipe_id">Vincular a receta (opcional)</label>
+        <select name="recipe_id">
+          <option value="">— Ninguna —</option>
+          {% for r in recetas %}<option value="{{ r.id }}">{{ r.nombre }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <label for="imagen_url">Link de la foto</label>
+    <input type="text" name="imagen_url" placeholder="Pega aquí el link de una foto (Instagram, Imgur, Google Drive público, etc.)">
+    <div class="hint">Sube la foto a donde ya publicas (Instagram, Google Fotos con link público, Imgur) y pega aquí el enlace directo a la imagen.</div>
+    <label style="display:flex; align-items:center; gap:.5rem; margin-top:.8rem;">
+      <input type="checkbox" name="activo" checked style="width:auto;"> Visible en el catálogo
+    </label>
+    <button class="btn btn-primary" style="margin-top:1rem;" type="submit">Agregar al catálogo</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2><span class="badge">📋</span> Tus productos</h2>
+  {% if not productos %}
+    <p class="hint">Aún no tienes productos en el catálogo.</p>
+  {% else %}
+    {% for p in productos %}
+    <div style="border-bottom:1px solid var(--border); padding:.7rem 0;">
+      <strong>{{ p.nombre }}</strong> — ${{ '%.2f'|format(p.precio_usd) }}
+      {% if not p.activo %}<span class="pill low">oculto</span>{% endif %}
+      <div class="hint">{{ p.descripcion }}</div>
+      <details style="margin-top:.4rem;">
+        <summary style="cursor:pointer; font-size:.78rem; color:var(--muted);">Editar</summary>
+        <form method="POST" action="{{ url_for('main.productos_editar', prod_id=p.id) }}" style="margin-top:.5rem;">
+          <input type="text" name="nombre" value="{{ p.nombre }}" required>
+          <input type="text" name="descripcion" value="{{ p.descripcion }}" style="margin-top:.4rem;">
+          <div class="row2" style="margin-top:.4rem;">
+            <input type="number" name="precio_usd" step="0.01" value="{{ p.precio_usd }}" required>
+            <select name="recipe_id">
+              <option value="">— Ninguna —</option>
+              {% for r in recetas %}<option value="{{ r.id }}" {{ 'selected' if p.recipe_id==r.id }}>{{ r.nombre }}</option>{% endfor %}
+            </select>
+          </div>
+          <input type="text" name="imagen_url" value="{{ p.imagen_url }}" style="margin-top:.4rem;">
+          <label style="display:flex; align-items:center; gap:.5rem; margin-top:.6rem;">
+            <input type="checkbox" name="activo" {{ 'checked' if p.activo }} style="width:auto;"> Visible en el catálogo
+          </label>
+          <button class="btn btn-ghost" style="margin-top:.5rem;" type="submit">Guardar cambios</button>
+        </form>
+        <form method="POST" action="{{ url_for('main.productos_eliminar', prod_id=p.id) }}" onsubmit="return confirm('¿Eliminar {{ p.nombre }}?');" style="margin-top:.4rem;">
+          <button class="btn-danger" type="submit">Eliminar producto</button>
+        </form>
+      </details>
+    </div>
+    {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

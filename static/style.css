@@ -14,8 +14,8 @@ header .top{display:flex; justify-content:space-between; align-items:center;}
 header h1{margin:0; font-size:1.2rem;}
 header p{margin:.2rem 0 0; opacity:.9; font-size:.82rem;}
 header a.logout{color:#fff; opacity:.85; font-size:.8rem; text-decoration:none;}
-nav.tabs{display:flex; gap:1.2rem; margin-top:.8rem;}
-nav.tabs a{color:#fff; opacity:.75; text-decoration:none; font-size:.85rem; padding-bottom:.3rem;}
+nav.tabs{display:flex; gap:1rem; margin-top:.8rem; overflow-x:auto; -webkit-overflow-scrolling:touch;}
+nav.tabs a{color:#fff; opacity:.75; text-decoration:none; font-size:.82rem; padding-bottom:.3rem; white-space:nowrap; flex:none;}
 nav.tabs a.active{opacity:1; border-bottom:2px solid #fff; font-weight:700;}
 main{max-width:680px; margin:0 auto; padding:1rem;}
 .card{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1rem 1.1rem; margin-bottom:1rem;}

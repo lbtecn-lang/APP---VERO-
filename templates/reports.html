@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Reportes — Veronik Sweet{% endblock %}
+{% block content %}
+
+<div class="card">
+  <h2><span class="badge">📄</span> Costos y precios por receta</h2>
+  <p class="hint">Un PDF con el costo, precio sugerido, ganancia y margen de cada receta guardada.</p>
+  <a class="btn btn-primary" style="display:block; text-align:center; text-decoration:none; margin-top:.6rem;"
+     href="{{ url_for('main.reporte_recetas_pdf') }}">Descargar PDF</a>
+</div>
+
+<div class="card">
+  <h2><span class="badge">📊</span> Historial de ventas</h2>
+  <p class="hint">Un Excel con todas tus ventas registradas y el total acumulado.</p>
+  <a class="btn btn-primary" style="display:block; text-align:center; text-decoration:none; margin-top:.6rem;"
+     href="{{ url_for('main.reporte_ventas_xlsx') }}">Descargar Excel</a>
+</div>
+{% endblock %}

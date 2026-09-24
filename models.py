@@ -28,6 +28,15 @@ def a_unidad_base(cantidad, unidad):
     return (cantidad or 0) * factor
 
 
+def de_unidad_base(cantidad_base, unidad):
+    """Convierte una cantidad ya expresada en la unidad base (g/ml/unidad) hacia
+    la unidad de compra de un ingrediente (ej. si compra en kg, devuelve kg)."""
+    _, factor = UNIT_DEFS.get(unidad, ("conteo", 1))
+    if factor == 0:
+        return 0
+    return (cantidad_base or 0) / factor
+
+
 class User(UserMixin, db.Model):
     __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True)
@@ -116,6 +125,21 @@ class Recipe(db.Model):
         comision_monto = precio * min(0.90, max(0, self.comision_pct / 100.0))
         return precio - self.costo_por_porcion_usd() - comision_monto
 
+    def descontar_stock(self, lotes=1):
+        """Resta del inventario los ingredientes usados por N lotes de esta receta.
+        Devuelve la lista de ingredientes que quedaron con stock insuficiente."""
+        insuficientes = []
+        for item in self.items:
+            ing = item.ingredient
+            if not ing:
+                continue
+            cantidad_base = a_unidad_base(item.cantidad_usada, item.unidad_usada) * lotes
+            descuento = de_unidad_base(cantidad_base, ing.unidad_compra)
+            if descuento > ing.stock_actual:
+                insuficientes.append(ing.nombre)
+            ing.stock_actual = round(ing.stock_actual - descuento, 4)
+        return insuficientes
+
 
 class RecipeIngredient(db.Model):
     __tablename__ = "recipe_ingredient"
@@ -141,3 +165,39 @@ class ExchangeRate(db.Model):
     tasa_usd_ves = db.Column(db.Float, nullable=False)
     fecha = db.Column(db.String(20), nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class Product(db.Model):
+    """Producto del catálogo público (lo que ven los clientes, con foto y precio)."""
+    __tablename__ = "product"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    recipe_id = db.Column(db.Integer, db.ForeignKey("recipe.id"), nullable=True)
+    nombre = db.Column(db.String(120), nullable=False)
+    descripcion = db.Column(db.String(300), nullable=False, default="")
+    precio_usd = db.Column(db.Float, nullable=False, default=0)
+    imagen_url = db.Column(db.String(500), nullable=False, default="")
+    activo = db.Column(db.Boolean, nullable=False, default=True)
+    orden = db.Column(db.Integer, nullable=False, default=0)
+
+    recipe = db.relationship("Recipe")
+
+
+class Sale(db.Model):
+    """Registro de una venta (para llevar historial e ingresos)."""
+    __tablename__ = "sale"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    recipe_id = db.Column(db.Integer, db.ForeignKey("recipe.id"), nullable=True)
+    producto_nombre = db.Column(db.String(120), nullable=False)
+    cantidad = db.Column(db.Float, nullable=False, default=1)
+    precio_unitario_usd = db.Column(db.Float, nullable=False, default=0)
+    cliente = db.Column(db.String(120), nullable=False, default="")
+    notas = db.Column(db.String(300), nullable=False, default="")
+    fecha = db.Column(db.DateTime, default=datetime.utcnow)
+
+    recipe = db.relationship("Recipe")
+
+    @property
+    def total_usd(self):
+        return self.cantidad * self.precio_unitario_usd
