@@ -19,8 +19,12 @@ def migrate_schema():
     # PostgreSQL y para que concuerde con el modelo actual.
     if "user" in existing_tables and "users" not in existing_tables:
         db.session.execute(text('ALTER TABLE "user" RENAME TO "users"'))
-        # refrescar la lista de tablas
         existing_tables = inspector.get_table_names()
+
+    # Si ambas tablas existen, no intentamos renombrar de nuevo; esto suele
+    # ser un caso de despliegue ya existente con datos previos parcialmente
+    # migrados. Se asume que la tabla final correcta es "users" y "user" se
+    # revisará manualmente en producción si fuera necesario.
 
     changes = [
         ("ingredient", "unidad_compra", "VARCHAR(10) DEFAULT 'unidad'"),
@@ -61,8 +65,11 @@ def create_app():
     app.register_blueprint(main_bp)
 
     with app.app_context():
-        db.create_all()
+        # Importante: migrar antes de crear la tabla para evitar que en una base
+        # existente con la tabla antigua "user" se creen al mismo tiempo "users"
+        # y "user" y se pierdan datos durante el primer despliegue con PostgreSQL.
         migrate_schema()
+        db.create_all()
         ensure_default_user()
 
     # Job diario: refresca la tasa BCV una vez al día (además del refresco
