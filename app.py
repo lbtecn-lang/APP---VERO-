@@ -14,11 +14,19 @@ def migrate_schema():
     inspector = inspect(db.engine)
     existing_tables = inspector.get_table_names()
 
+    # Si la base de datos tiene la tabla antigua "user" (creada con el modelo
+    # previo), la renombramos a "users" para evitar el nombre reservado en
+    # PostgreSQL y para que concuerde con el modelo actual.
+    if "user" in existing_tables and "users" not in existing_tables:
+        db.session.execute(text('ALTER TABLE "user" RENAME TO "users"'))
+        # refrescar la lista de tablas
+        existing_tables = inspector.get_table_names()
+
     changes = [
         ("ingredient", "unidad_compra", "VARCHAR(10) DEFAULT 'unidad'"),
         ("recipe_ingredient", "unidad_usada", "VARCHAR(10) DEFAULT 'unidad'"),
-        ("user", "activated", "BOOLEAN DEFAULT FALSE"),
-        ("user", "created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
+        ("users", "activated", "BOOLEAN DEFAULT FALSE"),
+        ("users", "created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
     ]
     for table, column, coltype in changes:
         if table not in existing_tables:
