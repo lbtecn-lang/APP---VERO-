@@ -8,15 +8,17 @@ auth_bp = Blueprint("auth", __name__)
 
 
 def ensure_default_user():
-    """Crea (o actualiza la clave de) la cuenta única de Veronik desde variables de entorno."""
+    """Crea o actualiza la cuenta administrativa del sistema."""
     username = os.environ.get("APP_USERNAME", "veronik")
     password = os.environ.get("APP_PASSWORD", "veronik2026")
     user = User.query.filter_by(username=username).first()
     if user is None:
-        user = User(username=username)
+        user = User(username=username, activated=True)
         user.set_password(password)
         db.session.add(user)
-        db.session.commit()
+    else:
+        user.activated = True
+    db.session.commit()
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
@@ -28,6 +30,9 @@ def login():
         password = request.form.get("password", "")
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
+            if not user.activated:
+                flash("Tu cuenta aún no está activada. Completa el pago para acceder al dashboard.", "error")
+                return redirect(url_for("main.landing"))
             login_user(user)
             return redirect(url_for("main.calculadora"))
         flash("Usuario o contraseña incorrectos.", "error")
