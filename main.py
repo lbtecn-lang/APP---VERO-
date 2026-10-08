@@ -19,7 +19,7 @@ WHATSAPP_NUMERO = "584220143659"
 def landing():
     if current_user.is_authenticated:
         return redirect(url_for("main.calculadora"))
-    return render_template("landing.html")
+    return redirect(url_for("auth.login"))
 
 
 @main_bp.route("/register", methods=["POST"])
