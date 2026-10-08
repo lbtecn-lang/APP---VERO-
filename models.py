@@ -38,7 +38,7 @@ def de_unidad_base(cantidad_base, unidad):
 
 
 class User(UserMixin, db.Model):
-    __tablename__ = "user"
+    __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
@@ -57,7 +57,7 @@ class User(UserMixin, db.Model):
 class Ingredient(db.Model):
     __tablename__ = "ingredient"
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     nombre = db.Column(db.String(120), nullable=False)
     presentacion_cantidad = db.Column(db.Float, nullable=False, default=1)
     # Columna antigua (texto libre) — se conserva por compatibilidad pero ya no se usa
@@ -88,7 +88,7 @@ class Ingredient(db.Model):
 class Recipe(db.Model):
     __tablename__ = "recipe"
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     nombre = db.Column(db.String(120), nullable=False)
     porciones = db.Column(db.Float, nullable=False, default=1)
     empaques_usd = db.Column(db.Float, nullable=False, default=0)
@@ -175,7 +175,7 @@ class Product(db.Model):
     """Producto del catálogo público (lo que ven los clientes, con foto y precio)."""
     __tablename__ = "product"
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     recipe_id = db.Column(db.Integer, db.ForeignKey("recipe.id"), nullable=True)
     nombre = db.Column(db.String(120), nullable=False)
     descripcion = db.Column(db.String(300), nullable=False, default="")
@@ -191,7 +191,7 @@ class Sale(db.Model):
     """Registro de una venta (para llevar historial e ingresos)."""
     __tablename__ = "sale"
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     recipe_id = db.Column(db.Integer, db.ForeignKey("recipe.id"), nullable=True)
     producto_nombre = db.Column(db.String(120), nullable=False)
     cantidad = db.Column(db.Float, nullable=False, default=1)
@@ -211,7 +211,7 @@ class Payment(db.Model):
     """Registro de pagos/activaciones realizados por los clientes."""
     __tablename__ = "payment"
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     amount_usd = db.Column(db.Float, nullable=False, default=0)
     currency = db.Column(db.String(10), nullable=False, default="usd")
     provider = db.Column(db.String(30), nullable=False, default="stripe")
