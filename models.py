@@ -42,6 +42,10 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    activated = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    payments = db.relationship("Payment", backref="user")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -201,3 +205,16 @@ class Sale(db.Model):
     @property
     def total_usd(self):
         return self.cantidad * self.precio_unitario_usd
+
+
+class Payment(db.Model):
+    """Registro de pagos/activaciones realizados por los clientes."""
+    __tablename__ = "payment"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    amount_usd = db.Column(db.Float, nullable=False, default=0)
+    currency = db.Column(db.String(10), nullable=False, default="usd")
+    provider = db.Column(db.String(30), nullable=False, default="stripe")
+    provider_payment_id = db.Column(db.String(200), nullable=False, default="")
+    status = db.Column(db.String(30), nullable=False, default="pending")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
