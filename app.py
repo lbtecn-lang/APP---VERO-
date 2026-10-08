@@ -17,6 +17,8 @@ def migrate_schema():
     changes = [
         ("ingredient", "unidad_compra", "VARCHAR(10) DEFAULT 'unidad'"),
         ("recipe_ingredient", "unidad_usada", "VARCHAR(10) DEFAULT 'unidad'"),
+        ("user", "activated", "BOOLEAN DEFAULT FALSE"),
+        ("user", "created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
     ]
     for table, column, coltype in changes:
         if table not in existing_tables:

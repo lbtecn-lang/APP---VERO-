@@ -2,6 +2,7 @@
   --pink:#c0316a; --pink-light:#f8d7e6; --pink-pale:#fdf1f6;
   --ink:#2b2130; --muted:#8a7a85; --card:#ffffff; --bg:#fdf6f9;
   --border:#f0d3e0; --good:#2e7d4f; --bad:#c0392b;
+  --shadow: 0 18px 45px rgba(192, 49, 106, 0.12);
 }
 *{box-sizing:border-box;}
 body{
@@ -20,7 +21,7 @@ nav.tabs a.active{opacity:1; border-bottom:2px solid #fff; font-weight:700;}
 main{max-width:680px; margin:0 auto; padding:1rem;}
 .card{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1rem 1.1rem; margin-bottom:1rem;}
 .card h2{font-size:.95rem; margin:0 0 .9rem; color:var(--pink); display:flex; align-items:center; gap:.5rem;}
-.badge{background:var(--pink-light); color:var(--pink); width:1.6rem; height:1.6rem; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex:none;}
+.badge{background:var(--pink-light); color:var(--pink); width:1.6rem; height:1.6rem; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700;}
 label{display:block; font-size:.82rem; color:var(--muted); margin:.6rem 0 .3rem;}
 input[type=text], input[type=number], input[type=password], select{
   width:100%; padding:.6rem .7rem; border:1px solid var(--border); border-radius:9px;
@@ -35,8 +36,9 @@ th{color:var(--muted); font-weight:600; font-size:.78rem; text-transform:upperca
 .pill{display:inline-block; padding:.15rem .5rem; border-radius:999px; font-size:.72rem; font-weight:700;}
 .pill.low{background:#fde3e3; color:var(--bad);}
 .pill.ok{background:#e4f4ea; color:var(--good);}
-.btn{padding:.6rem 1rem; border:none; border-radius:10px; font-size:.9rem; font-weight:700; cursor:pointer;}
-.btn-primary{background:var(--pink); color:#fff; width:100%;}
+.btn{padding:.7rem 1.1rem; border:none; border-radius:12px; font-size:.92rem; font-weight:700; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; transition:transform .15s ease, box-shadow .15s ease;}
+.btn:hover{transform:translateY(-1px);}
+.btn-primary{background:var(--pink); color:#fff; width:100%; box-shadow:var(--shadow);}
 .btn-ghost{background:none; border:1px solid var(--border); color:var(--ink);}
 .btn-danger{background:none; color:var(--bad); border:none; cursor:pointer; font-size:.85rem;}
 .add-btn{width:100%; padding:.65rem; border:1.5px dashed var(--pink); background:none; color:var(--pink); border-radius:10px; font-size:.88rem; font-weight:600; cursor:pointer; margin-top:.2rem;}
@@ -50,7 +52,7 @@ th{color:var(--muted); font-weight:600; font-size:.78rem; text-transform:upperca
 .result .breakdown{display:flex; justify-content:space-around; border-top:1px solid rgba(255,255,255,.3); padding-top:.8rem;}
 .result .breakdown div{font-size:.85rem;}
 .result .breakdown b{display:block; font-size:1.05rem;}
-.rate-box{display:flex; justify-content:space-between; align-items:center; font-size:.78rem; color:var(--muted); background:var(--pink-pale); border-radius:10px; padding:.5rem .7rem; margin-bottom:.9rem;}
+.rate-box{display:flex; justify-content:space-between; align-items:center; font-size:.78rem; color:var(--muted); background:var(--pink-pale); border-radius:10px; padding:.5rem .7rem; margin-bottom:.8rem;}
 .rate-box button{background:none; border:none; color:var(--pink); font-weight:700; cursor:pointer; font-size:.78rem;}
 .flash{padding:.6rem .8rem; border-radius:9px; font-size:.85rem; margin-bottom:.8rem;}
 .flash.ok{background:#e4f4ea; color:var(--good);}
@@ -59,3 +61,41 @@ th{color:var(--muted); font-weight:600; font-size:.78rem; text-transform:upperca
 .recipe-list a.active{color:var(--pink); font-weight:700;}
 .login-wrap{max-width:360px; margin:3rem auto; padding:0 1rem;}
 .login-wrap .card{text-align:center;}
+.login-link{margin-top:1rem; font-size:.82rem; color:var(--muted);}
+.login-link a{color:var(--pink); text-decoration:none; font-weight:700;}
+
+/* Landing page */
+.landing-body{background:linear-gradient(180deg,#fffafc 0%, #fdf6f9 100%);}
+.landing-shell{max-width:1180px; margin:0 auto; padding:24px 18px 48px;}
+.landing-hero{display:grid; grid-template-columns:1.1fr 0.9fr; gap:28px; align-items:center; min-height:72vh;}
+.landing-kicker{display:inline-block;padding:.45rem .8rem;border-radius:999px;background:#f8d7e6;color:var(--pink); font-weight:700; font-size:.8rem; letter-spacing:.04em; text-transform:uppercase;}
+.landing-title{font-size:clamp(2.3rem, 5vw, 4.3rem); line-height:1.05; margin:.9rem 0 1rem; font-weight:800; color:var(--ink);}
+.landing-lead{font-size:1.08rem; color:#574d55; max-width:560px; line-height:1.7;}
+.landing-actions{display:flex; gap:12px; margin-top:1.4rem; flex-wrap:wrap;}
+.landing-actions .btn{flex:1 1 220px;}
+.landing-card{background:#fff; border:1px solid var(--border); border-radius:24px; padding:24px; box-shadow:var(--shadow);}
+.landing-card h3{margin-top:0; color:var(--ink); font-size:1.3rem;}
+.landing-card ul{padding-left:1.1rem; color:#4a3a43; line-height:1.9;}
+.plan-box{margin-top:18px; padding:18px; border-radius:18px; background:linear-gradient(135deg,#fff,#fff5f8); border:1px solid var(--border);}
+.plan-price{font-size:2.5rem; font-weight:800; color:var(--pink); margin:.5rem 0;}
+.plan-price span{font-size:1rem; color:var(--muted); font-weight:600;}
+.section-grid{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:18px; margin-top:32px;}
+.info-card{background:#fff; border:1px solid var(--border); border-radius:20px; padding:20px; box-shadow:0 12px 28px rgba(73,28,45,0.04);}
+.info-card h4{margin:0 0 .8rem; font-size:1.05rem; color:var(--ink);}
+.info-card p{margin:0; color:#534951; line-height:1.7;}
+.footer-note{margin-top:28px; text-align:center; color:#6e5c66; font-size:.9rem;}
+
+@media (max-width: 820px){
+  .landing-hero{grid-template-columns:1fr; min-height:auto; padding-top:10px;}
+  .section-grid{grid-template-columns:1fr;}
+  main{max-width:100%; padding:.8rem;}
+}
+@media (max-width: 560px){
+  .row2, .row3{grid-template-columns:1fr;}
+  .ing-row{grid-template-columns:1fr 1fr;}
+  .ing-row .ext-cost{grid-column:1 / -1;}
+  .landing-actions{flex-direction:column;}
+  .btn{width:100%;}
+  .landing-title{font-size:2.4rem;}
+  .landing-card{padding:18px;}
+}

@@ -1,14 +1,121 @@
 import json
 import io
+import os
 from datetime import datetime
+
+import stripe
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_login import login_required, current_user
+
 from extensions import db
-from models import Ingredient, Recipe, RecipeIngredient, Product, Sale, UNIDADES_POR_CATEGORIA
+from models import Ingredient, Recipe, RecipeIngredient, Product, Sale, User, Payment, UNIDADES_POR_CATEGORIA
 from currency import get_current_rate, refresh_rate
 
 main_bp = Blueprint("main", __name__)
-WHATSAPP_NUMERO = "584220143659"  # formato internacional para wa.me, sin '+' ni espacios
+WHATSAPP_NUMERO = "584220143659"
+
+
+@main_bp.route("/")
+def landing():
+    if current_user.is_authenticated:
+        return redirect(url_for("main.calculadora"))
+    return render_template("landing.html")
+
+
+@main_bp.route("/register", methods=["POST"])
+def register_account():
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "")
+    if not username or not password:
+        flash("Debes completar usuario y contraseña para crear tu cuenta.", "error")
+        return redirect(url_for("main.landing"))
+
+    if User.query.filter_by(username=username).first():
+        flash("Ese usuario ya existe. Prueba otro nombre.", "error")
+        return redirect(url_for("main.landing"))
+
+    user = User(username=username, activated=False)
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+
+    flash("Cuenta creada. Completa el pago para activarla.", "ok")
+    return redirect(url_for("main.checkout", user_id=user.id))
+
+
+@main_bp.route("/checkout/<int:user_id>")
+def checkout(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.activated:
+        return redirect(url_for("auth.login"))
+
+    stripe_secret = os.environ.get("STRIPE_SECRET_KEY")
+    price_id = os.environ.get("STRIPE_PRICE_ID")
+    if not stripe_secret or not price_id:
+        flash("La pasarela de pago aún no está configurada.", "error")
+        return redirect(url_for("main.landing"))
+
+    stripe.api_key = stripe_secret
+    session = stripe.checkout.Session.create(
+        mode="payment",
+        line_items=[{"price": price_id, "quantity": 1}],
+        success_url=request.host_url + "payment/success?user_id=" + str(user.id),
+        cancel_url=request.host_url + "payment/cancel?user_id=" + str(user.id),
+        metadata={"user_id": str(user.id)},
+    )
+    return redirect(session.url, code=303)
+
+
+@main_bp.route("/payment/success")
+def payment_success():
+    user_id = request.args.get("user_id")
+    return render_template("payment_success.html", user_id=user_id)
+
+
+@main_bp.route("/payment/cancel")
+def payment_cancel():
+    user_id = request.args.get("user_id")
+    return render_template("payment_cancel.html", user_id=user_id)
+
+
+@main_bp.route("/webhook/stripe", methods=["POST"])
+def stripe_webhook():
+    payload = request.get_data(as_text=True)
+    sig_header = request.headers.get("Stripe-Signature")
+    endpoint_secret = os.environ.get("STRIPE_WEBHOOK_SECRET")
+
+    if not endpoint_secret:
+        return "Webhook secret missing", 400
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+    except Exception:
+        return "Invalid signature", 400
+
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        metadata = session.get("metadata") or {}
+        user_id = metadata.get("user_id")
+        if user_id:
+            user = User.query.get(int(user_id))
+            if user:
+                user.activated = True
+                payment = Payment.query.filter_by(provider_payment_id=session.get("id", "")).first()
+                if payment is None:
+                    payment = Payment(
+                        user_id=user.id,
+                        amount_usd=(session.get("amount_total") or 0) / 100,
+                        currency=(session.get("currency") or "usd").upper(),
+                        provider="stripe",
+                        provider_payment_id=session.get("id", ""),
+                        status="paid",
+                    )
+                    db.session.add(payment)
+                else:
+                    payment.status = "paid"
+                db.session.commit()
+
+    return "", 200
 
 
 def _ingredientes_json(ingredientes):
@@ -109,7 +216,7 @@ def inventario_eliminar(ing_id):
 
 
 # ---------- Calculadora / Recetas ----------
-@main_bp.route("/")
+@main_bp.route("/dashboard")
 @login_required
 def calculadora():
     ingredientes = Ingredient.query.filter_by(user_id=current_user.id).order_by(Ingredient.nombre).all()
@@ -301,7 +408,6 @@ def productos_eliminar(prod_id):
 
 @main_bp.route("/catalogo")
 def catalogo():
-    # Público — sin login. Muestra el catálogo del único usuario de la app.
     from models import User
     user = User.query.first()
     productos = []
